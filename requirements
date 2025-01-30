@@ -1,0 +1,8 @@
+streamlit
+pandas
+matplotlib
+seaborn
+wordcloud
+psycopg2
+rapidfuzz
+beautifulsoup4
