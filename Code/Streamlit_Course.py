@@ -57,6 +57,9 @@ def clean_and_format_description(html_text):
 
 # Function to generate a wordcloud
 def generate_wordcloud(data, column, title):
+    if column not in data.columns:
+        st.error(f"Column '{column}' does not exist in the data.")
+        return  # Skip the function if the column doesn't exist
     text = ' '.join([word for words in data[column].dropna() for word in words])
     wordcloud = WordCloud(background_color='white', colormap='viridis', width=1000, height=500).generate(text)
     plt.figure(figsize=(12, 7))
