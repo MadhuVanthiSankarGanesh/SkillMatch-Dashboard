@@ -17,23 +17,14 @@ COURSES_URL = "https://github.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/r
 CLEANEDJOBS_URL = "https://github.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/raw/main/data/cleaned_jobs.xlsx"
 
 # Function to fetch Excel files from GitHub
-def load_excel_data():
+def load_excel_data(file_path):
     try:
-        # Load the cleaned jobs data from the .xls file
-        cleaned_jobs_data = pd.read_excel('path_to_cleanedjobs.xls', sheet_name='your_sheet_name')
-        # Load the course data from the .xls file
-        course_data = pd.read_excel('path_to_courses.xls', sheet_name='your_sheet_name')
-        
-        # Ensure the 'extracted_skills' column exists in both datasets, if applicable
-        if 'extracted_skills_text' in cleaned_jobs_data.columns:
-            cleaned_jobs_data['extracted_skills'] = cleaned_jobs_data['extracted_skills_text'].apply(clean_and_extract_skills)
-        if 'extracted_skills' in course_data.columns:
-            course_data['extracted_skills'] = course_data['extracted_skills'].apply(lambda x: eval(x) if isinstance(x, str) else x)
-        
-        return cleaned_jobs_data, course_data
+        # Load data from the provided file path or URL
+        data = pd.read_excel(file_path)
+        return data
     except Exception as e:
         st.error(f"Error loading data: {e}")
-        return pd.DataFrame(), pd.DataFrame()
+        return pd.DataFrame()
 # Function to clean and extract skills
 def clean_and_extract_skills(input_text):
     if not isinstance(input_text, str):
