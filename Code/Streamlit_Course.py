@@ -17,14 +17,23 @@ COURSES_URL = "https://github.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/r
 CLEANEDJOBS_URL = "https://github.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/raw/main/data/cleaned_jobs.xlsx"
 
 # Function to fetch Excel files from GitHub
-def load_excel_data(url):
-    response = requests.get(url)
-    if response.status_code == 200:
-        return pd.read_excel(BytesIO(response.content))
-    else:
-        st.error(f"Failed to load data from {url}")
-        return pd.DataFrame()
-
+def load_data():
+    try:
+        # Load the cleaned jobs data from the .xls file
+        cleaned_jobs_data = pd.read_excel('path_to_cleanedjobs.xls', sheet_name='your_sheet_name')
+        # Load the course data from the .xls file
+        course_data = pd.read_excel('path_to_courses.xls', sheet_name='your_sheet_name')
+        
+        # Ensure the 'extracted_skills' column exists in both datasets, if applicable
+        if 'extracted_skills_text' in cleaned_jobs_data.columns:
+            cleaned_jobs_data['extracted_skills'] = cleaned_jobs_data['extracted_skills_text'].apply(clean_and_extract_skills)
+        if 'extracted_skills' in course_data.columns:
+            course_data['extracted_skills'] = course_data['extracted_skills'].apply(lambda x: eval(x) if isinstance(x, str) else x)
+        
+        return cleaned_jobs_data, course_data
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        return pd.DataFrame(), pd.DataFrame()
 # Function to clean and extract skills
 def clean_and_extract_skills(input_text):
     if not isinstance(input_text, str):
