@@ -25,6 +25,7 @@ def load_excel_data(file_path):
     except Exception as e:
         st.error(f"Error loading data: {e}")
         return pd.DataFrame()
+
 # Function to clean and extract skills
 def clean_and_extract_skills(input_text):
     if not isinstance(input_text, str):
@@ -74,14 +75,16 @@ cleaned_jobs_data = load_excel_data(CLEANEDJOBS_URL)
 
 # Process the data
 if not courses_data.empty:
-    if 'extracted_skills' in courses_data.columns:
-        courses_data['extracted_skills'] = courses_data['extracted_skills'].apply(lambda x: eval(x) if isinstance(x, str) else x)
+    # Get last column for extracted skills
+    last_column_name_courses = courses_data.columns[-1]
     if 'description' in courses_data.columns:
         courses_data['cleaned_description'] = courses_data['description'].apply(clean_and_format_description)
 
 if not cleaned_jobs_data.empty:
+    # Get last column for extracted skills
+    last_column_name_jobs = cleaned_jobs_data.columns[-1]
     if 'extracted_skills_text' in cleaned_jobs_data.columns:
-        cleaned_jobs_data['extracted_skills'] = cleaned_jobs_data['extracted_skills_text'].apply(clean_and_extract_skills)
+        cleaned_jobs_data['extracted_skills'] = cleaned_jobs_data[last_column_name_jobs].apply(clean_and_extract_skills)
 
 # Streamlit app layout
 st.title("Interactive Data Dashboard")
@@ -114,11 +117,11 @@ if page == "Jobs Data":
 # Display courses data and visualizations
 elif page == "Courses Data":
     st.header("Courses Data")
-    relevant_columns = ['title', 'rating', 'num_reviews', 'price', 'extracted_skills']
+    relevant_columns = ['title', 'rating', 'num_reviews', 'price', last_column_name_courses]
     displayed_columns = [col for col in relevant_columns if col in courses_data.columns]
     st.dataframe(courses_data[displayed_columns])  # Display only relevant columns
 
-    generate_wordcloud(courses_data, 'extracted_skills', "Word Cloud of Course Skills")
+    generate_wordcloud(courses_data, last_column_name_courses, "Word Cloud of Course Skills")
 
 elif page == "Insights & Visualizations":
     st.header("Insights & Visualizations")
@@ -147,11 +150,11 @@ elif page == "Course Recommendation System":
     st.header("Course Recommendation System")
     st.write("### Find Courses Based on Skills")
 
-    all_skills = courses_data['extracted_skills'].explode().dropna().unique()
+    all_skills = courses_data[last_column_name_courses].explode().dropna().unique()
     selected_skills = st.multiselect("Select skills:", sorted(all_skills))
 
     if selected_skills:
-        recommended_courses = courses_data[courses_data['extracted_skills'].apply(lambda skills: all(skill in skills for skill in selected_skills))]
+        recommended_courses = courses_data[courses_data[last_column_name_courses].apply(lambda skills: all(skill in skills for skill in selected_skills))]
         
         if not recommended_courses.empty:
             st.write("### Recommended Courses")
@@ -177,8 +180,8 @@ elif page == "Skill Gap Analysis":
         if selected_skill:
             st.write(f"### Courses Covering Related Skills to: {selected_skill}")
 
-            all_course_skills = courses_data['extracted_skills'].explode().dropna().unique()
-            matching_courses = courses_data[courses_data['extracted_skills'].apply(lambda skills: selected_skill in skills)]
+            all_course_skills = courses_data[last_column_name_courses].explode().dropna().unique()
+            matching_courses = courses_data[courses_data[last_column_name_courses].apply(lambda skills: selected_skill in skills)]
 
             if not matching_courses.empty:
                 for _, course in matching_courses.iterrows():
