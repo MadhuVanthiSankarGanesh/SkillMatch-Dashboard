@@ -1,4 +1,4 @@
-import streamlit as st
+ceimport streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -17,7 +17,7 @@ COURSES_URL = "https://github.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/r
 CLEANEDJOBS_URL = "https://github.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/raw/main/data/cleaned_jobs.xlsx"
 
 # Function to fetch Excel files from GitHub
-def load_data():
+def load_excel_data():
     try:
         # Load the cleaned jobs data from the .xls file
         cleaned_jobs_data = pd.read_excel('path_to_cleanedjobs.xls', sheet_name='your_sheet_name')
