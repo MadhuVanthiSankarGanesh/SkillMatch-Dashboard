@@ -13,8 +13,8 @@ sns.set_style("whitegrid")
 sns.set_context("talk")  # Increase font sizes
 
 # GitHub URLs for your files (replace with your actual URLs)
-COURSES_URL = "https://github.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/raw/main/data/courses.xls"
-CLEANEDJOBS_URL = "https://github.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/raw/main/data/cleaned_jobs.xls"
+COURSES_URL = "https://github.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/raw/main/data/courses.xlsx"
+CLEANEDJOBS_URL = "https://github.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/raw/main/data/cleaned_jobs.xlsx"
 
 # Function to fetch Excel files from GitHub
 def load_excel_data(url):
