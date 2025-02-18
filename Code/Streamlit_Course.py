@@ -3,30 +3,25 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from wordcloud import WordCloud
+import io
+import requests
 import re
 from rapidfuzz import process, fuzz
 from bs4 import BeautifulSoup
-import time
 
 # Set Seaborn style for better visuals
 sns.set_style("whitegrid")
 sns.set_context("talk")  # Increase font sizes
+
+# GitHub file URLs
 courses_data_file = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/DataforDashboard/course_data.csv"
 jobs_data_file = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/DataforDashboard/cleaned_jobs_data.csv"
 
-def load_data():
-    start_time = time.time()
-    
-    # Load jobs data
-    jobs_data = pd.read_csv(jobs_data_file)
-    print(f"Jobs data loaded in {time.time() - start_time} seconds.")
-    
-    # Load courses data
-    courses_data = pd.read_csv(courses_data_file)
-    print(f"Courses data loaded in {time.time() - start_time} seconds.")
-    
-    return jobs_data, courses_data
-
+def fetch_data_from_github(url):
+    """Fetches data from GitHub raw CSV URL."""
+    response = requests.get(url)
+    response.raise_for_status()
+    return pd.read_csv(io.StringIO(response.text))
 
 def clean_and_extract_skills(input_text):
     if not isinstance(input_text, str):
@@ -57,6 +52,7 @@ def clean_and_format_description(html_text):
 
     return text
 
+
 def display_course_details(course):
     """Displays course details in a formatted card in Streamlit."""
     st.markdown(f"""
@@ -69,13 +65,26 @@ def display_course_details(course):
     """, unsafe_allow_html=True)
 
 @st.cache_data
-def cached_load_data():
-    cleaned_jobs_data, course_data = load_data()
-    return cleaned_jobs_data, course_data
+def load_data():
+    try:
+        # Load data from GitHub
+        jobs_data = fetch_data_from_github(jobs_data_file)
+        courses_data = fetch_data_from_github(courses_data_file)
+        
+        # Clean and extract skills
+        if 'extracted_skills' in jobs_data.columns:
+            jobs_data['extracted_skills'] = jobs_data['extracted_skills'].apply(lambda x: clean_and_extract_skills(x))
+        
+        if 'extracted_skills' in courses_data.columns:
+            courses_data['extracted_skills'] = courses_data['extracted_skills'].apply(lambda x: eval(x) if isinstance(x, str) else x)
+
+        return jobs_data, courses_data
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        return pd.DataFrame(), pd.DataFrame()
 
 def generate_wordcloud(data, column, title):
-    # Flatten the list of skills in the specified column
-    text = ' '.join([skill for skills in data[column].dropna() for skill in skills])
+    text = ' '.join([word for words in data[column].dropna() for word in words])
     wordcloud = WordCloud(background_color='white', colormap='viridis', width=1000, height=500).generate(text)
     plt.figure(figsize=(12, 7))
     plt.imshow(wordcloud, interpolation='bilinear')
@@ -84,7 +93,7 @@ def generate_wordcloud(data, column, title):
     st.pyplot(plt)
 
 # Load data
-cleaned_jobs, course_data = cached_load_data()
+cleaned_jobs, course_data = load_data()
 
 st.title("Interactive Data Dashboard")
 
@@ -103,7 +112,6 @@ if page == "Jobs Data":
     st.write("### Skills Analysis")
     generate_wordcloud(cleaned_jobs, 'extracted_skills', "Word Cloud of Job Skills")
     
-    # Flatten skills list for counting
     skills = cleaned_jobs['extracted_skills'].explode()
     skill_counts = skills.value_counts().head(5)
     plt.figure(figsize=(12, 6))
@@ -158,7 +166,6 @@ elif page == "Insights & Visualizations":
         sns.histplot(course_data['num_reviews'], bins=20, kde=True, color='green')
         plt.title("Distribution of Course Reviews", fontsize=20)
         st.pyplot(plt)
-
 elif page == "Course Recommendation System":
     st.header("Course Recommendation System")
     st.write("### Find Courses Based on Skills")
@@ -168,7 +175,7 @@ elif page == "Course Recommendation System":
 
     if selected_skills:
         recommended_courses = course_data[course_data['extracted_skills'].apply(lambda skills: all(skill in skills for skill in selected_skills))]
-        
+
         if not recommended_courses.empty:
             st.write("### Recommended Courses")
             for _, course in recommended_courses.iterrows():
