@@ -74,7 +74,8 @@ def cached_load_data():
     return cleaned_jobs_data, course_data
 
 def generate_wordcloud(data, column, title):
-    text = ' '.join([word for words in data[column].dropna() for word in words])
+    # Flatten the list of skills in the specified column
+    text = ' '.join([skill for skills in data[column].dropna() for skill in skills])
     wordcloud = WordCloud(background_color='white', colormap='viridis', width=1000, height=500).generate(text)
     plt.figure(figsize=(12, 7))
     plt.imshow(wordcloud, interpolation='bilinear')
@@ -82,6 +83,7 @@ def generate_wordcloud(data, column, title):
     plt.title(title, fontsize=20)
     st.pyplot(plt)
 
+# Load data
 cleaned_jobs, course_data = cached_load_data()
 
 st.title("Interactive Data Dashboard")
@@ -101,6 +103,7 @@ if page == "Jobs Data":
     st.write("### Skills Analysis")
     generate_wordcloud(cleaned_jobs, 'extracted_skills', "Word Cloud of Job Skills")
     
+    # Flatten skills list for counting
     skills = cleaned_jobs['extracted_skills'].explode()
     skill_counts = skills.value_counts().head(5)
     plt.figure(figsize=(12, 6))
