@@ -12,15 +12,13 @@ from bs4 import BeautifulSoup
 sns.set_style("whitegrid")
 sns.set_context("talk")  # Increase font sizes
 
-# Database connection details
-DB_CONFIG = {
-    "dbname": "CourseDashboard_final",
-    "user": "postgres",
-    "password": "1234",
-    "host": "localhost",
-    "port": 5432
+db_config = {
+    "dbname": st.secrets["postgres"]["dbname"],
+    "user": st.secrets["postgres"]["user"],
+    "password": st.secrets["postgres"]["password"],
+    "host": st.secrets["postgres"]["host"],
+    "port": st.secrets["postgres"]["port"]
 }
-
 def create_connection(db_config):
     try:
         connection = psycopg2.connect(**db_config)
