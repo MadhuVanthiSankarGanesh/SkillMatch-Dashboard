@@ -11,8 +11,8 @@ import time
 # Set Seaborn style for better visuals
 sns.set_style("whitegrid")
 sns.set_context("talk")  # Increase font sizes
-courses_data_file = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/DataforDasboard/courses_data.csv"
-jobs_data_file = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/DataforDasboard/cleaned_jobs_data.csv"
+courses_data_file = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/DataforDashboard/course_data.csv"
+jobs_data_file = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/DataforDashboard/cleaned_jobs_data.csv"
 
 def load_data():
     start_time = time.time()
