@@ -3,63 +3,30 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from wordcloud import WordCloud
-import psycopg2
 import re
 from rapidfuzz import process, fuzz
 from bs4 import BeautifulSoup
+import time
 
 # Set Seaborn style for better visuals
 sns.set_style("whitegrid")
 sns.set_context("talk")  # Increase font sizes
+courses_data_file = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/DataforDasboard/courses_data.csv"
+jobs_data_file = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/DataforDasboard/cleaned_jobs_data.csv"
 
-db_config = {
-    "dbname": st.secrets["postgres"]["dbname"],
-    "user": st.secrets["postgres"]["user"],
-    "password": st.secrets["postgres"]["password"],
-    "host": st.secrets["postgres"]["host"],
-    "port": st.secrets["postgres"]["port"]
-}
-def create_connection(db_config):
-    try:
-        connection = psycopg2.connect(**db_config)
-        print("Database connection successful.")
-        return connection
-    except Exception as e:
-        print(f"Error connecting to database: {e}")
-        return None
+def load_data():
+    start_time = time.time()
+    
+    # Load jobs data
+    jobs_data = pd.read_csv(jobs_data_file)
+    print(f"Jobs data loaded in {time.time() - start_time} seconds.")
+    
+    # Load courses data
+    courses_data = pd.read_csv(courses_data_file)
+    print(f"Courses data loaded in {time.time() - start_time} seconds.")
+    
+    return jobs_data, courses_data
 
-def fetch_cleaned_jobs_data(connection):
-    try:
-        query = """
-        SELECT 
-            job_id, 
-            title, 
-            company_name,
-            company_id,
-            description,
-            max_salary,
-            pay_period,
-            location, 
-            med_salary,
-            min_salary,
-            formatted_work_type,
-            remote_allowed,
-            work_type, 
-            extracted_skills::TEXT AS extracted_skills_text 
-        FROM cleaned_jobs_with_skills_final1;
-        """
-        return pd.read_sql_query(query, connection)
-    except Exception as e:
-        print(f"Error fetching data: {e}")
-        return pd.DataFrame()
-
-def fetch_course_data(connection):
-    try:
-        query = "SELECT * FROM course_data;"
-        return pd.read_sql_query(query, connection)
-    except Exception as e:
-        print(f"Error fetching data: {e}")
-        return pd.DataFrame()
 
 def clean_and_extract_skills(input_text):
     if not isinstance(input_text, str):
@@ -90,7 +57,6 @@ def clean_and_format_description(html_text):
 
     return text
 
-
 def display_course_details(course):
     """Displays course details in a formatted card in Streamlit."""
     st.markdown(f"""
@@ -104,20 +70,8 @@ def display_course_details(course):
 
 @st.cache_data
 def load_data():
-    connection = create_connection(DB_CONFIG)
-    if not connection:
-        st.error("Unable to connect to the database.")
-        return pd.DataFrame(), pd.DataFrame()
-    try:
-        cleaned_jobs_data = fetch_cleaned_jobs_data(connection)
-        course_data = fetch_course_data(connection)
-        if 'extracted_skills_text' in cleaned_jobs_data.columns:
-            cleaned_jobs_data['extracted_skills'] = cleaned_jobs_data['extracted_skills_text'].apply(clean_and_extract_skills)
-        if 'extracted_skills' in course_data.columns:
-            course_data['extracted_skills'] = course_data['extracted_skills'].apply(lambda x: eval(x) if isinstance(x, str) else x)
-        return cleaned_jobs_data, course_data
-    finally:
-        connection.close()
+    cleaned_jobs_data, course_data = load_data()
+    return cleaned_jobs_data, course_data
 
 def generate_wordcloud(data, column, title):
     text = ' '.join([word for words in data[column].dropna() for word in words])
@@ -167,7 +121,6 @@ elif page == "Courses Data":
 
     generate_wordcloud(course_data, 'extracted_skills', "Word Cloud of Course Skills")
 
-
 elif page == "Insights & Visualizations":
     st.header("Insights & Visualizations")
     
@@ -202,6 +155,7 @@ elif page == "Insights & Visualizations":
         sns.histplot(course_data['num_reviews'], bins=20, kde=True, color='green')
         plt.title("Distribution of Course Reviews", fontsize=20)
         st.pyplot(plt)
+
 elif page == "Course Recommendation System":
     st.header("Course Recommendation System")
     st.write("### Find Courses Based on Skills")
