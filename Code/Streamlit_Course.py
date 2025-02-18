@@ -17,8 +17,12 @@ CLEANEDJOBS_URL = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/Ski
 # Function to fetch Excel files from GitHub (handling .xls format)
 def load_excel_data(file_path):
     try:
-        data = pd.read_excel(file_path, engine='xlrd')  # Specify xlrd engine for .xls files
-        return data
+        if file_path.endswith('.xls'):
+            return pd.read_excel(file_path, engine='xlrd')  # Handle true XLS files
+        elif file_path.endswith('.xlsx'):
+            return pd.read_excel(file_path, engine='openpyxl')  # Handle XLSX files
+        else:
+            return pd.read_csv(file_path)  # Handle CSV files disguised as XLS
     except Exception as e:
         st.error(f"Error loading data: {e}")
         return pd.DataFrame()
