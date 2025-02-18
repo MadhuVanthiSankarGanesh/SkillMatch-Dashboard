@@ -95,7 +95,7 @@ def generate_wordcloud(data, column, title):
 # Load data
 cleaned_jobs, course_data = load_data()
 
-st.title("Interactive Data Dashboard")
+st.title("SkillMatch Dashboard: Jobs & Courses Insights")
 
 st.sidebar.title("Navigation")
 page = st.sidebar.selectbox("Choose a page:", [
