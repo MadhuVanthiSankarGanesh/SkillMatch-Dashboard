@@ -10,14 +10,14 @@ from bs4 import BeautifulSoup
 sns.set_style("whitegrid")
 sns.set_context("talk")  # Increase font sizes
 
-COURSES_URL = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/data/courses.xlsx"
-CLEANEDJOBS_URL = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/data/cleaned_jobs.xlsx"
+COURSES_URL = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/data/courses.xls"
+CLEANEDJOBS_URL = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/data/cleaned_jobs.xls"
 
 
-# Function to fetch Excel files from GitHub
+# Function to fetch Excel files from GitHub (handling .xls format)
 def load_excel_data(file_path):
     try:
-        data = pd.read_excel(file_path)
+        data = pd.read_excel(file_path, engine='xlrd')  # Specify xlrd engine for .xls files
         return data
     except Exception as e:
         st.error(f"Error loading data: {e}")
@@ -61,7 +61,6 @@ cleaned_jobs_data = load_excel_data(CLEANEDJOBS_URL)
 # Debugging: Print available columns
 st.write("Columns in cleaned_jobs_data:", cleaned_jobs_data.columns.tolist())
 st.write("Preview of cleaned_jobs_data:", cleaned_jobs_data.head())  # Show first few rows
-
 
 # Check if data is loaded correctly
 if not courses_data.empty:
