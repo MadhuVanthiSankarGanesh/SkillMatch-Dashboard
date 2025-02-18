@@ -2,6 +2,7 @@
 
 ## Overview
 This project is an interactive data dashboard built with **Streamlit**, designed to analyze job market trends, skill gaps, and recommend relevant courses based on job descriptions. It integrates data from various sources and presents key insights using **data visualization, word clouds, and skill-matching algorithms**.
+
 **Dashboard Link :** https://skillmatch-dashboard-mb9vylrejen9rn9yms8awf.streamlit.app/
 
 ## Data Sources
