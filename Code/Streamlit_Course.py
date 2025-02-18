@@ -58,6 +58,11 @@ def generate_wordcloud(data, column, title):
 courses_data = load_excel_data(COURSES_URL)
 cleaned_jobs_data = load_excel_data(CLEANEDJOBS_URL)
 
+# Debugging: Print available columns
+st.write("Columns in cleaned_jobs_data:", cleaned_jobs_data.columns.tolist())
+st.write("Preview of cleaned_jobs_data:", cleaned_jobs_data.head())  # Show first few rows
+
+
 # Check if data is loaded correctly
 if not courses_data.empty:
     last_column_name_courses = courses_data.columns[-1]
