@@ -69,7 +69,7 @@ def display_course_details(course):
     """, unsafe_allow_html=True)
 
 @st.cache_data
-def load_data():
+def cached_load_data():
     cleaned_jobs_data, course_data = load_data()
     return cleaned_jobs_data, course_data
 
@@ -82,7 +82,7 @@ def generate_wordcloud(data, column, title):
     plt.title(title, fontsize=20)
     st.pyplot(plt)
 
-cleaned_jobs, course_data = load_data()
+cleaned_jobs, course_data = cached_load_data()
 
 st.title("Interactive Data Dashboard")
 
