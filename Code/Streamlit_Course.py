@@ -3,31 +3,66 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from wordcloud import WordCloud
+import psycopg2
 import re
+from rapidfuzz import process, fuzz
 from bs4 import BeautifulSoup
 
 # Set Seaborn style for better visuals
 sns.set_style("whitegrid")
 sns.set_context("talk")  # Increase font sizes
 
-COURSES_URL = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/data/courses.xls"
-CLEANEDJOBS_URL = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/data/cleaned_jobs.xls"
+# Database connection details
+DB_CONFIG = {
+    "dbname": "CourseDashboard_final",
+    "user": "postgres",
+    "password": "1234",
+    "host": "localhost",
+    "port": 5432
+}
 
-
-# Function to fetch Excel files from GitHub (handling .xls format)
-def load_excel_data(file_path):
+def create_connection(db_config):
     try:
-        if file_path.endswith('.xls'):
-            return pd.read_excel(file_path, engine='xlrd')  # Handle true XLS files
-        elif file_path.endswith('.xlsx'):
-            return pd.read_excel(file_path, engine='openpyxl')  # Handle XLSX files
-        else:
-            return pd.read_csv(file_path)  # Handle CSV files disguised as XLS
+        connection = psycopg2.connect(**db_config)
+        print("Database connection successful.")
+        return connection
     except Exception as e:
-        st.error(f"Error loading data: {e}")
+        print(f"Error connecting to database: {e}")
+        return None
+
+def fetch_cleaned_jobs_data(connection):
+    try:
+        query = """
+        SELECT 
+            job_id, 
+            title, 
+            company_name,
+            company_id,
+            description,
+            max_salary,
+            pay_period,
+            location, 
+            med_salary,
+            min_salary,
+            formatted_work_type,
+            remote_allowed,
+            work_type, 
+            extracted_skills::TEXT AS extracted_skills_text 
+        FROM cleaned_jobs_with_skills_final1;
+        """
+        return pd.read_sql_query(query, connection)
+    except Exception as e:
+        print(f"Error fetching data: {e}")
         return pd.DataFrame()
 
-# Function to clean and extract skills
+def fetch_course_data(connection):
+    try:
+        query = "SELECT * FROM course_data;"
+        return pd.read_sql_query(query, connection)
+    except Exception as e:
+        print(f"Error fetching data: {e}")
+        return pd.DataFrame()
+
 def clean_and_extract_skills(input_text):
     if not isinstance(input_text, str):
         return []
@@ -36,20 +71,57 @@ def clean_and_extract_skills(input_text):
     input_text = input_text.replace('"', '')
     return [skill.strip() for skill in input_text.split(',') if skill.strip()]
 
-# Function to clean and format course descriptions
+# Change the clean_and_format_description function to handle the HTML formatting more effectively
 def clean_and_format_description(html_text):
+    """Cleans HTML tags and formats a course description for better readability."""
+    
+    # Parse HTML using BeautifulSoup
     soup = BeautifulSoup(html_text, "html.parser")
-    text = soup.get_text(separator="\n")
+
+    # Extract text while keeping bullet points and formatting
+    text = soup.get_text(separator="\n")  
+
+    # Remove excessive blank lines
     text = re.sub(r'\n+', '\n', text).strip()
-    text = re.sub(r'([a-z])([A-Z])', r'\1. \2', text)
-    text = text.replace("•", "- ")
+
+    # Add spacing after punctuation if missing
+    text = re.sub(r'([a-z])([A-Z])', r'\1. \2', text)  
+
+    # Format bullet points
+    text = text.replace("•", "- ")  
+
     return text
 
-# Function to generate a word cloud
+
+def display_course_details(course):
+    """Displays course details in a formatted card in Streamlit."""
+    st.markdown(f"""
+    <div style="border: 2px solid #ddd; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+        <h4 style="color: #2C3E50;">{course['title']}</h4>
+        <p><strong>Rating:</strong> {course['rating']} ⭐ | <strong>Reviews:</strong> {course['num_reviews']}</p>
+        <p><strong>Price:</strong> {course['price']}</p>
+        <p><strong>Headline:</strong> {course['headline']}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+@st.cache_data
+def load_data():
+    connection = create_connection(DB_CONFIG)
+    if not connection:
+        st.error("Unable to connect to the database.")
+        return pd.DataFrame(), pd.DataFrame()
+    try:
+        cleaned_jobs_data = fetch_cleaned_jobs_data(connection)
+        course_data = fetch_course_data(connection)
+        if 'extracted_skills_text' in cleaned_jobs_data.columns:
+            cleaned_jobs_data['extracted_skills'] = cleaned_jobs_data['extracted_skills_text'].apply(clean_and_extract_skills)
+        if 'extracted_skills' in course_data.columns:
+            course_data['extracted_skills'] = course_data['extracted_skills'].apply(lambda x: eval(x) if isinstance(x, str) else x)
+        return cleaned_jobs_data, course_data
+    finally:
+        connection.close()
+
 def generate_wordcloud(data, column, title):
-    if column not in data.columns:
-        st.error(f"Column '{column}' does not exist in the data.")
-        return
     text = ' '.join([word for words in data[column].dropna() for word in words])
     wordcloud = WordCloud(background_color='white', colormap='viridis', width=1000, height=500).generate(text)
     plt.figure(figsize=(12, 7))
@@ -58,28 +130,8 @@ def generate_wordcloud(data, column, title):
     plt.title(title, fontsize=20)
     st.pyplot(plt)
 
-# Load data from GitHub
-courses_data = load_excel_data(COURSES_URL)
-cleaned_jobs_data = load_excel_data(CLEANEDJOBS_URL)
+cleaned_jobs, course_data = load_data()
 
-# Debugging: Print available columns
-st.write("Columns in cleaned_jobs_data:", cleaned_jobs_data.columns.tolist())
-st.write("Preview of cleaned_jobs_data:", cleaned_jobs_data.head())  # Show first few rows
-
-# Check if data is loaded correctly
-if not courses_data.empty:
-    last_column_name_courses = courses_data.columns[-1]
-    if 'description' in courses_data.columns:
-        courses_data['cleaned_description'] = courses_data['description'].apply(clean_and_format_description)
-
-if not cleaned_jobs_data.empty:
-    last_column_name_jobs = cleaned_jobs_data.columns[-1]
-    if 'extracted_skills_text' in cleaned_jobs_data.columns:
-        cleaned_jobs_data['extracted_skills'] = cleaned_jobs_data['extracted_skills_text'].apply(clean_and_extract_skills)
-    else:
-        st.error("Column 'extracted_skills_text' not found in cleaned jobs dataset.")
-
-# Streamlit app layout
 st.title("Interactive Data Dashboard")
 
 st.sidebar.title("Navigation")
@@ -93,63 +145,110 @@ page = st.sidebar.selectbox("Choose a page:", [
 
 if page == "Jobs Data":
     st.header("Cleaned Jobs Data")
-    st.dataframe(cleaned_jobs_data)
+    st.dataframe(cleaned_jobs)
     st.write("### Skills Analysis")
-    if 'extracted_skills' in cleaned_jobs_data.columns:
-        generate_wordcloud(cleaned_jobs_data, 'extracted_skills', "Word Cloud of Job Skills")
-        skills = cleaned_jobs_data['extracted_skills'].explode()
-        skill_counts = skills.value_counts().head(5)
-        plt.figure(figsize=(12, 6))
-        sns.barplot(x=skill_counts.values, y=skill_counts.index, palette='viridis')
-        plt.title("Top 5 Skills in Job Postings", fontsize=20)
-        plt.xlabel("Count", fontsize=16)
-        plt.ylabel("Skill", fontsize=16)
-        st.pyplot(plt)
-    else:
-        st.error("No extracted skills available in the dataset.")
+    generate_wordcloud(cleaned_jobs, 'extracted_skills', "Word Cloud of Job Skills")
+    
+    skills = cleaned_jobs['extracted_skills'].explode()
+    skill_counts = skills.value_counts().head(5)
+    plt.figure(figsize=(12, 6))
+    sns.barplot(x=skill_counts.values, y=skill_counts.index, palette='viridis')
+    plt.title("Top 5 Skills in Job Postings", fontsize=20)
+    plt.xlabel("Count", fontsize=16)
+    plt.ylabel("Skill", fontsize=16)
+    st.pyplot(plt)
 
 elif page == "Courses Data":
     st.header("Courses Data")
-    st.dataframe(courses_data)
-    if 'title' in courses_data.columns:
-        generate_wordcloud(courses_data, last_column_name_courses, "Word Cloud of Course Skills")
+
+    # Select only relevant columns to display
+    relevant_columns = ['title', 'rating', 'num_reviews', 'price', 'extracted_skills']
+    displayed_columns = [col for col in relevant_columns if col in course_data.columns]
+
+    st.dataframe(course_data[displayed_columns])  # Display only relevant columns
+
+    generate_wordcloud(course_data, 'extracted_skills', "Word Cloud of Course Skills")
+
 
 elif page == "Insights & Visualizations":
     st.header("Insights & Visualizations")
-    if 'rating' in courses_data.columns and 'num_reviews' in courses_data.columns:
+    
+    if 'rating' in course_data.columns and 'num_reviews' in course_data.columns:
         plt.figure(figsize=(12, 6))
-        sns.scatterplot(data=courses_data, x='num_reviews', y='rating', s=100)
+        sns.scatterplot(data=course_data, x='num_reviews', y='rating', s=100)
         plt.title("Ratings vs Number of Reviews", fontsize=20)
         st.pyplot(plt)
 
+    if 'med_salary' in cleaned_jobs.columns:
+        plt.figure(figsize=(12, 6))
+        sns.histplot(cleaned_jobs['med_salary'].dropna(), bins=20, kde=True, color='blue')
+        plt.title("Distribution of Median Salaries", fontsize=20)
+        plt.xlabel("Median Salary", fontsize=16)
+        plt.ylabel("Frequency", fontsize=16)
+        st.pyplot(plt)
+
+    if 'work_type' in cleaned_jobs.columns:
+        plt.figure(figsize=(12, 6))
+        sns.countplot(y=cleaned_jobs['work_type'], palette='coolwarm')
+        plt.title("Distribution of Work Types", fontsize=20)
+        st.pyplot(plt)
+
+    if 'max_salary' in cleaned_jobs.columns and 'min_salary' in cleaned_jobs.columns:
+        plt.figure(figsize=(12, 6))
+        sns.boxplot(data=cleaned_jobs[['min_salary', 'max_salary']])
+        plt.title("Salary Range Distribution", fontsize=20)
+        st.pyplot(plt)
+
+    if 'num_reviews' in course_data.columns:
+        plt.figure(figsize=(12, 6))
+        sns.histplot(course_data['num_reviews'], bins=20, kde=True, color='green')
+        plt.title("Distribution of Course Reviews", fontsize=20)
+        st.pyplot(plt)
 elif page == "Course Recommendation System":
     st.header("Course Recommendation System")
-    if last_column_name_courses in courses_data.columns:
-        all_skills = courses_data[last_column_name_courses].explode().dropna().unique()
-        selected_skills = st.multiselect("Select skills:", sorted(all_skills))
-        if selected_skills:
-            recommended_courses = courses_data[courses_data[last_column_name_courses].apply(lambda skills: all(skill in skills for skill in selected_skills))]
-            if not recommended_courses.empty:
-                for _, course in recommended_courses.iterrows():
-                    st.write(course['title'])
-            else:
-                st.write("No matching courses found.")
+    st.write("### Find Courses Based on Skills")
+
+    all_skills = course_data['extracted_skills'].explode().dropna().unique()
+    selected_skills = st.multiselect("Select skills:", sorted(all_skills))
+
+    if selected_skills:
+        recommended_courses = course_data[course_data['extracted_skills'].apply(lambda skills: all(skill in skills for skill in selected_skills))]
+        
+        if not recommended_courses.empty:
+            st.write("### Recommended Courses")
+            for _, course in recommended_courses.iterrows():
+                display_course_details(course)
+        else:
+            st.write("No matching courses found.")
 
 elif page == "Skill Gap Analysis":
     st.header("Skill Gap Analysis")
-    if 'title' in cleaned_jobs_data.columns and 'extracted_skills' in cleaned_jobs_data.columns:
-        selected_job = st.selectbox("Select a Job:", cleaned_jobs_data['title'].unique())
-        if selected_job:
-            job_skills = cleaned_jobs_data[cleaned_jobs_data['title'] == selected_job]['extracted_skills'].explode().dropna().unique()
-            st.write(f"### Skills Required for {selected_job}")
-            st.write(job_skills)
-            selected_skill = st.selectbox("Select a Skill from the Job:", job_skills)
-            if selected_skill and last_column_name_courses in courses_data.columns:
-                matching_courses = courses_data[courses_data[last_column_name_courses].apply(lambda skills: selected_skill in skills)]
+    st.write("### Analyze Skill Gaps for a Job")
+
+    selected_job = st.selectbox("Select a Job:", cleaned_jobs['title'].unique())
+
+    if selected_job:
+        job_skills = cleaned_jobs[cleaned_jobs['title'] == selected_job]['extracted_skills'].explode().dropna().unique()
+        st.write(f"### Skills Required for {selected_job}")
+        st.write(job_skills)
+
+        selected_skill = st.selectbox("Select a Skill from the Job:", job_skills)
+
+        if selected_skill:
+            st.write(f"### Courses Covering Related Skills to: {selected_skill}")
+
+            all_course_skills = course_data['extracted_skills'].explode().dropna().unique()
+            similar_skills = [match for match, score, _ in process.extract(selected_skill, all_course_skills, scorer=fuzz.ratio) if score >= 70]
+
+            if similar_skills:
+                st.write(f"Matched Skills: {similar_skills}")
+
+                matching_courses = course_data[course_data['extracted_skills'].apply(lambda skills: any(skill in skills for skill in similar_skills))]
+
                 if not matching_courses.empty:
                     for _, course in matching_courses.iterrows():
-                        st.write(course['title'])
+                        display_course_details(course)
                 else:
                     st.write("No matching courses found.")
-    else:
-        st.error("Jobs dataset does not have necessary columns.")
+            else:
+                st.write("No similar skills found.")
