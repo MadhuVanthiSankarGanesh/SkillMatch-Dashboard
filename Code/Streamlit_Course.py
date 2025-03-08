@@ -14,8 +14,8 @@ sns.set_style("whitegrid")
 sns.set_context("talk")
 
 # GitHub file URLs
-courses_data_file = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/DataforDashboard/course_data.csv"
-jobs_data_file = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/DataforDashboard/cleaned_jobs_data.csv"
+courses_data_file = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/DataforDashboard/course_data_final.csv"
+jobs_data_file = "https://raw.githubusercontent.com/MadhuVanthiSankarGanesh/SkillMatch-Dashboard/main/DataforDashboard/cleaned_jobs_data_final.csv"
 
 def fetch_data_from_github(url):
     """Fetches data from GitHub raw CSV URL."""
